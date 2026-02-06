@@ -18,9 +18,20 @@ import {
   updateRunWithClient,
 } from '@/server/services/storage';
 import type { Client } from '@opensearch-project/opensearch';
-import { runEvaluation, callBedrockJudge } from './evaluation';
-import { DEFAULT_CONFIG } from '@/lib/constants';
+import { runEvaluationWithConnector, callBedrockJudge } from './evaluation';
+import { connectorRegistry } from '@/services/connectors/server';
+import { loadConfigSync } from '@/lib/config/index';
 import { tracePollingManager } from './traces/tracePoller';
+import { RunResultStatus } from '@/types';
+
+/**
+ * Callback invoked after each test case completes during benchmark execution.
+ * Used to persist intermediate progress to OpenSearch for real-time polling.
+ */
+export type OnTestCaseCompleteCallback = (
+  testCaseId: string,
+  result: { reportId: string; status: RunResultStatus }
+) => Promise<void>;
 
 /**
  * Cancellation token for stopping execution
@@ -50,6 +61,8 @@ export interface ExecuteRunOptions {
   cancellationToken?: CancellationToken;
   /** OpenSearch client for storage operations (required) */
   client: Client;
+  /** Callback invoked after each test case completes (for persisting intermediate progress) */
+  onTestCaseComplete?: OnTestCaseCompleteCallback;
 }
 
 /**
@@ -57,7 +70,8 @@ export interface ExecuteRunOptions {
  */
 function buildAgentConfigForRun(run: BenchmarkRun): AgentConfig {
   // Find the base agent config
-  const baseAgent = DEFAULT_CONFIG.agents.find(a => a.key === run.agentKey);
+  const config = loadConfigSync();
+  const baseAgent = config.agents.find(a => a.key === run.agentKey);
 
   if (!baseAgent) {
     throw new Error(`Agent not found: ${run.agentKey}`);
@@ -78,7 +92,8 @@ function buildAgentConfigForRun(run: BenchmarkRun): AgentConfig {
  * Get the Bedrock model ID from a model key
  */
 function getBedrockModelId(modelKey: string): string {
-  const modelConfig = DEFAULT_CONFIG.models[modelKey];
+  const config = loadConfigSync();
+  const modelConfig = config.models[modelKey];
   return modelConfig?.model_id || modelKey;
 }
 
@@ -95,7 +110,7 @@ export async function executeRun(
   options: ExecuteRunOptions
 ): Promise<BenchmarkRun> {
   const totalTestCases = benchmark.testCaseIds.length;
-  const { cancellationToken, client } = options;
+  const { cancellationToken, client, onTestCaseComplete } = options;
 
   // Initialize results if empty
   if (!run.results) {
@@ -125,7 +140,7 @@ export async function executeRun(
       const testCase = testCaseMap.get(testCaseId);
 
       if (!testCase) {
-        console.warn(`Test case not found: ${testCaseId}`);
+        console.warn(`[BenchmarkRunner] Test case not found: ${testCaseId}`);
         run.results[testCaseId] = { reportId: '', status: 'failed' };
         continue;
       }
@@ -147,12 +162,13 @@ export async function executeRun(
         const agentConfig = buildAgentConfigForRun(run);
         const bedrockModelId = getBedrockModelId(run.modelId);
 
-        // Run the evaluation
-        const report = await runEvaluation(
+        // Run the evaluation using connector
+        const report = await runEvaluationWithConnector(
           agentConfig,
           bedrockModelId,
           testCase,
-          () => {} // No step callback needed here
+          () => {}, // No debug callback needed
+          { registry: connectorRegistry }
         );
 
         // Save the report to OpenSearch and get the actual stored ID
@@ -163,7 +179,6 @@ export async function executeRun(
 
         // Start trace polling for trace-mode runs (metricsStatus: 'pending')
         if (savedReport.metricsStatus === 'pending' && savedReport.runId) {
-          console.info(`[BenchmarkRunner] Starting trace polling for report ${savedReport.id}`);
           startTracePollingForReport(savedReport, testCase, client);
         }
 
@@ -172,9 +187,21 @@ export async function executeRun(
           reportId: savedReport.id,
           status: 'completed',
         };
+
+        // Persist progress to OpenSearch (fire-and-forget with logging)
+        if (onTestCaseComplete) {
+          onTestCaseComplete(testCaseId, run.results[testCaseId])
+            .catch(err => console.warn(`[BenchmarkRunner] Failed to persist progress for ${testCaseId}:`, err.message));
+        }
       } catch (error) {
-        console.error(`Error running test case ${testCaseId}:`, error);
+        console.error(`[BenchmarkRunner] Error in test case ${testCaseId}:`, error instanceof Error ? error.message : error);
         run.results[testCaseId] = { reportId: '', status: 'failed' };
+
+        // Persist failure progress to OpenSearch (fire-and-forget with logging)
+        if (onTestCaseComplete) {
+          onTestCaseComplete(testCaseId, run.results[testCaseId])
+            .catch(err => console.warn(`[BenchmarkRunner] Failed to persist failure progress for ${testCaseId}:`, err.message));
+        }
       }
     }
 
@@ -247,18 +274,19 @@ export async function runSingleUseCase(
   const agentConfig = buildAgentConfigForRun(run);
   const bedrockModelId = getBedrockModelId(run.modelId);
 
-  const report = await runEvaluation(
+  // Run the evaluation using connector
+  const report = await runEvaluationWithConnector(
     agentConfig,
     bedrockModelId,
     testCase,
-    onStep || (() => {})
+    onStep || (() => {}),
+    { registry: connectorRegistry }
   );
 
   const savedReport = await saveReportWithClient(client, report);
 
   // Start trace polling for trace-mode runs
   if (savedReport.metricsStatus === 'pending' && savedReport.runId) {
-    console.info(`[BenchmarkRunner] Starting trace polling for report ${savedReport.id}`);
     startTracePollingForReport(savedReport, testCase, client);
   }
 
@@ -282,13 +310,9 @@ function startTracePollingForReport(report: EvaluationReport, testCase: TestCase
     report.runId,
     {
       onTracesFound: async (spans, updatedReport) => {
-        console.info(`[BenchmarkRunner] Traces found for report ${report.id}: ${spans.length} spans`);
-
         try {
           // Call the Bedrock judge with the trajectory and expectedOutcomes
-          // Use the model from the report (which was used for the agent evaluation)
           const judgeModelId = report.modelId ? getBedrockModelId(report.modelId) : undefined;
-          console.info(`[BenchmarkRunner] Calling Bedrock judge for report ${report.id} with model: ${judgeModelId || '(default)'}`);
 
           const judgment = await callBedrockJudge(
             updatedReport.trajectory,
@@ -297,11 +321,9 @@ function startTracePollingForReport(report: EvaluationReport, testCase: TestCase
               expectedTrajectory: testCase.expectedTrajectory,
             },
             [], // No logs for trace-mode - traces are the source of truth
-            (chunk) => console.debug('[BenchmarkRunner] Judge progress:', chunk.slice(0, 100)),
+            () => {}, // No progress callback needed
             judgeModelId
           );
-
-          console.info(`[BenchmarkRunner] Judge result for report ${report.id}: ${judgment.passFailStatus}, accuracy: ${judgment.metrics.accuracy}%`);
 
           // Update report with judge results
           await updateRunWithClient(client, report.id, {
@@ -310,12 +332,9 @@ function startTracePollingForReport(report: EvaluationReport, testCase: TestCase
             metrics: judgment.metrics,
             llmJudgeReasoning: judgment.llmJudgeReasoning,
             improvementStrategies: judgment.improvementStrategies,
-            // Note: Not storing spans - fetch on-demand using report.runId
           });
-
-          console.info(`[BenchmarkRunner] Report ${report.id} updated with judge results`);
         } catch (error) {
-          console.error(`[BenchmarkRunner] Failed to judge report ${report.id}:`, error);
+          console.error(`[BenchmarkRunner] Failed to judge report ${report.id}:`, error instanceof Error ? error.message : error);
           // Still mark as ready but with error info
           await updateRunWithClient(client, report.id, {
             metricsStatus: 'error',
@@ -323,11 +342,9 @@ function startTracePollingForReport(report: EvaluationReport, testCase: TestCase
           });
         }
       },
-      onAttempt: (attempt, maxAttempts) => {
-        console.info(`[BenchmarkRunner] Polling attempt ${attempt}/${maxAttempts} for report ${report.id}`);
-      },
+      onAttempt: () => {}, // No verbose logging
       onError: (error) => {
-        console.error(`[BenchmarkRunner] Trace polling failed for report ${report.id}:`, error);
+        console.error(`[BenchmarkRunner] Trace polling failed for report ${report.id}:`, error instanceof Error ? error.message : error);
       },
     }
   );

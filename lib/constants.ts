@@ -6,6 +6,22 @@
 import { AppConfig } from '@/types';
 import { ENV_CONFIG, buildMLCommonsHeaders } from '@/lib/config';
 
+/**
+ * Get Claude Code connector environment variables at runtime.
+ * This ensures environment variables are evaluated when needed,
+ * not at module load time.
+ */
+function getClaudeCodeConnectorEnv(): Record<string, string> {
+  return {
+    AWS_PROFILE: process.env.AWS_PROFILE || "Bedrock",
+    CLAUDE_CODE_USE_BEDROCK: "1",
+    AWS_REGION: process.env.AWS_REGION || "us-west-2",
+    DISABLE_PROMPT_CACHING: "1",
+    DISABLE_ERROR_REPORTING: "1",
+    DISABLE_TELEMETRY: "1",
+  };
+}
+
 // Model pricing per 1M tokens (USD)
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   // Claude 4.x models (with inference profile prefix)
@@ -24,6 +40,7 @@ export const DEFAULT_CONFIG: AppConfig = {
       name: "Demo Agent",
       endpoint: "mock://demo",
       description: "Mock agent for testing (simulated responses)",
+      connectorType: "mock",
       models: ["demo-model"],
       headers: {},
       useTraces: false,
@@ -33,6 +50,7 @@ export const DEFAULT_CONFIG: AppConfig = {
       name: "Langgraph",
       endpoint: ENV_CONFIG.langgraphEndpoint,
       description: "Langgraph AG-UI agent server",
+      connectorType: "agui-streaming",
       models: [
         "claude-sonnet-4.5",
         "claude-sonnet-4",
@@ -46,6 +64,7 @@ export const DEFAULT_CONFIG: AppConfig = {
       name: "ML-Commons (Localhost)",
       endpoint: ENV_CONFIG.mlcommonsEndpoint,
       description: "Local OpenSearch ML-Commons conversational agent",
+      connectorType: "agui-streaming",
       models: [
         "claude-sonnet-4.5",
         "claude-sonnet-4",
@@ -59,6 +78,7 @@ export const DEFAULT_CONFIG: AppConfig = {
       name: "HolmesGPT",
       endpoint: ENV_CONFIG.holmesGptEndpoint,
       description: "HolmesGPT AI-powered RCA agent (AG-UI)",
+      connectorType: "agui-streaming",
       models: [
         "claude-sonnet-4.5",
         "claude-sonnet-4",
@@ -66,7 +86,23 @@ export const DEFAULT_CONFIG: AppConfig = {
       ],
       headers: {},
       useTraces: true
-    }
+    },
+    {
+      key: "claude-code",
+      name: "Claude Code",
+      endpoint: "claude",  // Command name, not URL
+      description: "Claude Code CLI agent (requires claude command installed)",
+      connectorType: "claude-code",
+      models: ["claude-sonnet-4"],
+      headers: {},
+      useTraces: false,
+      // connectorConfig env vars are evaluated at runtime by getClaudeCodeConnectorEnv()
+      get connectorConfig() {
+        return {
+          env: getClaudeCodeConnectorEnv(),
+        };
+      },
+    },
   ],
   models: {
     "demo-model": {

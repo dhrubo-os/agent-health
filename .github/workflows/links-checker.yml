@@ -23,6 +23,7 @@ jobs:
         uses: lycheeverse/lychee-action@v2.0.2
         with:
           fail: true
+          output: ./lychee-report.md
           args: |
             --verbose
             --no-progress
@@ -31,10 +32,20 @@ jobs:
             --exclude-private
             --exclude 'localhost'
             --exclude '127.0.0.1'
-            --exclude 'xenproject.org'
+            --exclude '.*xenproject\.org.*'
             --exclude-path 'node_modules'
             --exclude-path 'coverage'
             --exclude-path 'dist'
+            --retry-wait-time 5
+            --max-retries 3
+            --timeout 30
             '**/*.md'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload link check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lychee-report
+          path: ./lychee-report.md
