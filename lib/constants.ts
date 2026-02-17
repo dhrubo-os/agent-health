@@ -4,7 +4,7 @@
  */
 
 import { AppConfig, ModelConfig } from '@/types';
-import { ENV_CONFIG, buildMLCommonsHeaders } from '@/lib/config';
+import { ENV_CONFIG, buildMLCommonsHeaders, buildOllyHeaders } from '@/lib/config';
 
 /**
  * Get Claude Code connector environment variables at runtime.
@@ -71,6 +71,20 @@ export const DEFAULT_CONFIG: AppConfig = {
         "claude-haiku-3.5",
       ],
       headers: buildMLCommonsHeaders(),
+      useTraces: true,
+    },
+    {
+      key: "olly-chat",
+      name: "Olly Chat Agent",
+      endpoint: ENV_CONFIG.ollyEndpoint,
+      description: "OASIS Olly Chat Agent (OpenSearch assistant)",
+      connectorType: "olly",
+      models: [
+        "claude-sonnet-4.5",
+        "claude-sonnet-4",
+        "claude-haiku-3.5",
+      ],
+      headers: buildOllyHeaders(),
       useTraces: true,
     },
     {

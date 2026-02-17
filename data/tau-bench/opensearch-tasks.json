@@ -1,0 +1,47 @@
+[
+  {
+    "id": "opensearch_task_1",
+    "category": "cluster_info",
+    "user_goal": "Find out how many indices exist in the cluster",
+    "initial_query": "How many indices do I have?",
+    "expected_tools": ["ListIndexTool"],
+    "success_criteria": "Agent provides the exact number of indices",
+    "evaluation_type": "tool_usage_and_accuracy"
+  },
+  {
+    "id": "opensearch_task_2",
+    "category": "index_management",
+    "user_goal": "Get information about a specific index's settings",
+    "initial_query": "Can you show me the settings for my logs index?",
+    "expected_tools": ["IndexMappingTool", "ListIndexTool"],
+    "success_criteria": "Agent retrieves and displays index settings",
+    "evaluation_type": "tool_usage_and_accuracy"
+  },
+  {
+    "id": "opensearch_task_3",
+    "category": "search",
+    "user_goal": "Search for error logs in the last hour",
+    "initial_query": "Show me error logs from the past hour",
+    "expected_tools": ["ListIndexTool", "SearchIndexTool", "IndexMappingTool"],
+    "success_criteria": "Agent constructs appropriate time-based query and returns results",
+    "evaluation_type": "tool_usage_and_accuracy"
+  },
+  {
+    "id": "opensearch_task_4",
+    "category": "cluster_health",
+    "user_goal": "Check if the cluster is healthy",
+    "initial_query": "Is my OpenSearch cluster healthy?",
+    "expected_tools": ["ClusterHealthTool"],
+    "success_criteria": "Agent checks cluster health and reports status (green/yellow/red)",
+    "evaluation_type": "tool_usage_and_accuracy"
+  },
+  {
+    "id": "opensearch_task_5",
+    "category": "index_analysis",
+    "user_goal": "Find the largest indices by storage size",
+    "initial_query": "Which indices are taking up the most space?",
+    "expected_tools": ["ListIndexTool"],
+    "success_criteria": "Agent lists indices sorted by size",
+    "evaluation_type": "tool_usage_and_accuracy"
+  }
+]

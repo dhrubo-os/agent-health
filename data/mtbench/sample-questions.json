@@ -1,0 +1,82 @@
+[
+  {
+    "question_id": 1,
+    "category": "writing",
+    "turns": [
+      "Compose an engaging travel blog post about a recent trip to Hawaii, highlighting cultural experiences and must-see attractions."
+    ],
+    "reference": "A well-written travel blog post should include: personal experiences with Hawaiian culture (luaus, hula, local cuisine), specific attractions (Pearl Harbor, Waikiki Beach, volcanoes), practical tips, and engaging storytelling that inspires readers to visit."
+  },
+  {
+    "question_id": 2,
+    "category": "reasoning",
+    "turns": [
+      "If a train travels 120 miles in 2 hours, and then 180 miles in 3 hours, what is its average speed for the entire journey?"
+    ],
+    "reference": "The average speed is 60 mph. Total distance is 300 miles (120 + 180), total time is 5 hours (2 + 3), so average speed = 300/5 = 60 mph."
+  },
+  {
+    "question_id": 3,
+    "category": "coding",
+    "turns": [
+      "Write a Python function that takes a list of integers and returns the sum of all even numbers in the list."
+    ],
+    "reference": "A correct solution should: filter even numbers (n % 2 == 0), sum them, handle edge cases (empty list), and be efficient. Example: def sum_evens(nums): return sum(n for n in nums if n % 2 == 0)"
+  },
+  {
+    "question_id": 4,
+    "category": "math",
+    "turns": [
+      "What is the derivative of f(x) = 3x^2 + 2x - 5?"
+    ],
+    "reference": "The derivative is f'(x) = 6x + 2. Using the power rule: derivative of 3x^2 is 6x, derivative of 2x is 2, derivative of constant -5 is 0."
+  },
+  {
+    "question_id": 5,
+    "category": "roleplay",
+    "turns": [
+      "You are a medieval knight. Describe your typical day at the castle."
+    ],
+    "reference": "A good response should include: morning training/drills, attending to lord/lady, patrol duties, meals in the great hall, evening activities, and use appropriate medieval language and context."
+  },
+  {
+    "question_id": 6,
+    "category": "extraction",
+    "turns": [
+      "Extract the key information from this text: 'John Smith, born on March 15, 1985 in New York, graduated from MIT in 2007 with a degree in Computer Science.'"
+    ],
+    "reference": "Key information: Name: John Smith, Birth Date: March 15, 1985, Birth Place: New York, Education: MIT (2007), Degree: Computer Science"
+  },
+  {
+    "question_id": 7,
+    "category": "stem",
+    "turns": [
+      "Explain the process of photosynthesis in simple terms."
+    ],
+    "reference": "Photosynthesis is how plants make food using sunlight. Plants take in carbon dioxide from air and water from soil, use sunlight energy (captured by chlorophyll), and produce glucose (sugar) for energy and oxygen as a byproduct. Formula: 6CO2 + 6H2O + light → C6H12O6 + 6O2"
+  },
+  {
+    "question_id": 8,
+    "category": "humanities",
+    "turns": [
+      "What were the main causes of World War I?"
+    ],
+    "reference": "Main causes include: militarism (arms race), alliances (entangling agreements), imperialism (colonial competition), nationalism (ethnic tensions), and the assassination of Archduke Franz Ferdinand (immediate trigger). Often remembered as MAIN + trigger event."
+  },
+  {
+    "question_id": 9,
+    "category": "common-sense",
+    "turns": [
+      "If you're cooking pasta and the water starts boiling over, what should you do?"
+    ],
+    "reference": "Immediately reduce heat/turn down burner, remove pot from heat temporarily, stir the pasta, add a small amount of cold water or oil to break foam, and/or use a larger pot next time. Never leave boiling pasta unattended."
+  },
+  {
+    "question_id": 10,
+    "category": "fermi",
+    "turns": [
+      "Estimate how many piano tuners are in New York City."
+    ],
+    "reference": "A reasonable estimate using Fermi estimation: NYC population ~8M, assume 1 in 20 households has piano (400K pianos), each tuned once/year, tuner does 4 pianos/day × 250 days/year = 1000 pianos/year, so need ~400 piano tuners. Accept answers in range 200-600 with sound reasoning."
+  }
+]

@@ -49,6 +49,7 @@ export interface EnvConfig {
   langgraphEndpoint: string;
   mlcommonsEndpoint: string;
   holmesGptEndpoint: string;
+  ollyEndpoint: string;
 
   // ML-Commons agent headers (for agent to access data source)
   mlcommonsHeaderOpenSearchUrl: string;
@@ -58,6 +59,10 @@ export interface EnvConfig {
   mlcommonsHeaderAwsAccessKeyId: string;
   mlcommonsHeaderAwsSecretAccessKey: string;
   mlcommonsHeaderAwsSessionToken: string;
+
+  // Olly agent headers (data source that Olly queries)
+  ollyHeaderOpenSearchUrl: string;
+  ollyHeaderAwsRegion: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,6 +115,7 @@ export const ENV_CONFIG: EnvConfig = {
   langgraphEndpoint: getEnvVar('LANGGRAPH_ENDPOINT', 'http://localhost:3000'),
   mlcommonsEndpoint: getEnvVar('MLCOMMONS_ENDPOINT', 'http://localhost:9200/_plugins/_ml/agents/{agent_id}/_execute/stream'),
   holmesGptEndpoint: getEnvVar('HOLMESGPT_ENDPOINT', 'http://localhost:5050/api/agui/chat'),
+  ollyEndpoint: getEnvVar('OLLY_ENDPOINT', ''),
 
   // ML-Commons agent headers
   mlcommonsHeaderOpenSearchUrl: getEnvVar('MLCOMMONS_HEADER_OPENSEARCH_URL', ''),
@@ -119,6 +125,10 @@ export const ENV_CONFIG: EnvConfig = {
   mlcommonsHeaderAwsAccessKeyId: getEnvVar('MLCOMMONS_HEADER_AWS_ACCESS_KEY_ID', ''),
   mlcommonsHeaderAwsSecretAccessKey: getEnvVar('MLCOMMONS_HEADER_AWS_SECRET_ACCESS_KEY', ''),
   mlcommonsHeaderAwsSessionToken: getEnvVar('MLCOMMONS_HEADER_AWS_SESSION_TOKEN', ''),
+
+  // Olly agent headers (data source that Olly queries)
+  ollyHeaderOpenSearchUrl: getEnvVar('OLLY_HEADER_OPENSEARCH_URL', ''),
+  ollyHeaderAwsRegion: getEnvVar('OLLY_HEADER_AWS_REGION', ''),
 };
 
 /**
@@ -157,6 +167,25 @@ export function buildMLCommonsHeaders(): Record<string, string> {
     if (ENV_CONFIG.mlcommonsHeaderAwsSessionToken) {
       headers['aws-session-token'] = ENV_CONFIG.mlcommonsHeaderAwsSessionToken;
     }
+  }
+
+  return headers;
+}
+
+/**
+ * Build headers for Olly agent from env config
+ * Olly uses SigV4 authentication to OASIS, but needs headers to tell
+ * the agent which data source to query
+ */
+export function buildOllyHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  if (ENV_CONFIG.ollyHeaderOpenSearchUrl) {
+    headers['opensearch-url'] = ENV_CONFIG.ollyHeaderOpenSearchUrl;
+  }
+
+  if (ENV_CONFIG.ollyHeaderAwsRegion) {
+    headers['aws-region'] = ENV_CONFIG.ollyHeaderAwsRegion;
   }
 
   return headers;

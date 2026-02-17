@@ -8,6 +8,7 @@
  */
 
 import { Response } from 'express';
+import { signAgentRequest } from './auth/sigv4Signer';
 
 // ============================================================================
 // Types
@@ -186,13 +187,29 @@ export async function proxyAgentRequest(
 
   console.log('[AgentProxy] Calling real endpoint:', endpoint);
 
+  // Check if endpoint needs SigV4 authentication (OASIS endpoints)
+  let requestHeaders = { ...customHeaders };
+  
+  if (endpoint.includes('oasis') && endpoint.includes('amazonaws.com')) {
+    console.log('[AgentProxy] OASIS endpoint detected, applying SigV4 authentication');
+    try {
+      const sigv4Headers = await signAgentRequest(endpoint, payload);
+      requestHeaders = { ...requestHeaders, ...sigv4Headers };
+      console.log('[AgentProxy] SigV4 headers applied successfully');
+    } catch (error) {
+      console.error('[AgentProxy] SigV4 signing failed:', error);
+      sendErrorEvent(res, `SigV4 authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return;
+    }
+  }
+
   // Make request to agent endpoint
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'text/event-stream',
-      ...customHeaders,
+      ...requestHeaders,
     },
     body: JSON.stringify(payload),
   });

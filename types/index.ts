@@ -15,7 +15,7 @@ export type DateFormatVariant = 'date' | 'datetime' | 'detailed';
 export type JudgeProvider = 'demo' | 'bedrock' | 'ollama' | 'openai';
 
 // Connector protocol for agent communication
-export type ConnectorProtocol = 'agui-streaming' | 'rest' | 'subprocess' | 'claude-code' | 'mock';
+export type ConnectorProtocol = 'agui-streaming' | 'rest' | 'subprocess' | 'claude-code' | 'mock' | 'olly';
 
 export interface ModelConfig {
   model_id: string;

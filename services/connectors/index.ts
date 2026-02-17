@@ -39,14 +39,20 @@ export { BaseConnector } from './base/BaseConnector';
 // ============ Browser-safe Connector Exports ============
 // These connectors work in browser environments (no Node.js dependencies)
 export { AGUIStreamingConnector, aguiStreamingConnector } from './agui/AGUIStreamingConnector';
+export { OllyConnector } from './agui/OllyConnector';
 export { MockConnector, mockConnector } from './mock/MockConnector';
 export { RESTConnector, restConnector } from './rest/RESTConnector';
 
 // ============ Auto-register Browser-safe Connectors ============
 import { connectorRegistry } from './registry';
 import { aguiStreamingConnector } from './agui/AGUIStreamingConnector';
+import { OllyConnector } from './agui/OllyConnector';
 import { mockConnector } from './mock/MockConnector';
 import { restConnector } from './rest/RESTConnector';
+
+// Register Olly connector
+const ollyConnector = new OllyConnector();
+connectorRegistry.register(ollyConnector);
 
 // Register browser-compatible connectors on module load
 // Server-only connectors (subprocess, claude-code) are registered via server.ts

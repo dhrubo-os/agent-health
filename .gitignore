@@ -33,4 +33,6 @@ agent-health.config.json
 # Playwright
 /playwright-report/
 /playwright/.cache/
-/test-results/
+/test-results/benchmark-report.json
+tau-benchmark-report.json
+*-report.json
